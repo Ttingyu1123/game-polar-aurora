@@ -101,6 +101,7 @@
       this.flash = 0;           // white hit flash
       this.hitSpin = 0;
       this.celebrateT = 0;
+      this.celebrateDur = 1.4;
       this.wingFlap = 0;
       this.speed01 = 0;
       this.auroraLight = [120, 220, 255, 0.5];
@@ -292,11 +293,20 @@
       this.sqY = 1.2; this.sqX = 0.86;
     }
 
-    celebrate() {
+    /**
+     * Wings up, grinning back at the camera. Deliberately does NOT hop: an
+     * involuntary jump mid-run would throw the player into a hazard they had
+     * already read correctly, and punishing someone for doing well is the
+     * worst thing a celebration can do.
+     */
+    celebrate(dur) {
+      if (this.dead) return;
+      this.celebrateDur = dur || 1.4;
       this.fsm.set('celebrate');
       this.celebrateT = 0;
-      this.setExpr('happy', 99);
-      this._faceCamT = 99;
+      this.setExpr('happy', this.celebrateDur);
+      this._faceCamT = this.celebrateDur;
+      this.wingFlap = 1;
     }
 
     /* ── sim ────────────────────────────────────────────────── */
@@ -344,16 +354,11 @@
       }
       if (this.fsm.is('celebrate')) {
         this.celebrateT += dt;
-        // Little hops of joy.
-        if (this.onGround && this.celebrateT > 0.28) {
-          this.vy = 7.2; this.onGround = false; this.celebrateT = 0;
-          this.sqY = 1.18; this.sqX = 0.86;
-          this.ps.footPuff(this.x, 0, 0.5);
-        }
+        if (this.celebrateT > this.celebrateDur) this.fsm.set('run');
       }
 
       /* running footfalls */
-      if (this.onGround && !this.dead && this.fsm.isAny('run', 'land')) {
+      if (this.onGround && !this.dead && this.fsm.isAny('run', 'land', 'celebrate')) {
         const ph = U.wrap(this.runPhase, TAU);
         const strike = ph < 0.2 || (ph > Math.PI && ph < Math.PI + 0.2);
         if (strike && !this._struck) {

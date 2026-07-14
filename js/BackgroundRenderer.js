@@ -75,7 +75,10 @@
       // One full colour cycle every ~200 m: the sky is a slow progress bar.
       this.hueDrift = Math.sin(worldZ * 0.0031) * 26 + Math.sin(worldZ * 0.00089) * 14;
       this._flare = Math.max(0, this._flare - dt * 0.85);
-      this.intensity = 1 + this._flare * 1.5;
+      // Multiplies every ribbon's alpha, and the ribbons composite additively
+      // — so this saturates fast. At 1.5 the sky went flat white and lost the
+      // curtain shapes entirely, which is a worse moment, not a bigger one.
+      this.intensity = 1 + this._flare * 0.62;
     }
 
     /** Aurora crystal pickup → the whole sky pulses. */
@@ -311,7 +314,7 @@
         const w = ctx.createLinearGradient(0, 0, 0, hz);
         const h = 168 + this.hueDrift;
         w.addColorStop(0, U.hsl(h, 0.9, 0.6, 0));
-        w.addColorStop(1, U.hsl(h, 0.9, 0.6, this._flare * 0.11));
+        w.addColorStop(1, U.hsl(h, 0.9, 0.6, this._flare * 0.06));
         ctx.fillStyle = w;
         ctx.fillRect(0, 0, W, hz);
       }

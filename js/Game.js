@@ -427,8 +427,10 @@
           this.ui.combo(this.combo + '× COMBO  +' + bonus, '#4ff0d0');
           this.renderer.setFlash(120, 240, 210, 0.2);
           this.particles.pickupBurst(this.player.x, this.player.y + 0.7, 0.4, [79, 240, 208], true);
-          this.player.lookBack(0.7);
           this.player.wingFlap = 1;
+          // A 30-chain is genuinely hard; it earns the full celebration.
+          if (this.combo >= 30) this.player.celebrate(1.2);
+          else this.player.lookBack(0.7);
         }
       }
 
@@ -444,8 +446,8 @@
         this.renderer.setFlash(140, 255, 220, 0.55);
         this.cam.addTrauma(0.22);
         this.ui.combo('AURORA  +250', '#6effd6');
-        this.player.lookBack(1.2);
-        this.player.setExpr('happy', 1.4);
+        this.player.celebrate(1.6);
+        this.particles.confetti(this.player.x, this.player.y + 0.8, 0.3);
         for (let i = 0; i < 26; i++) {
           this.particles.auroraMote(this.player.x + U.rand(-3, 3), U.rand(0.2, 3.4), U.rand(-1, 8), 140 + i * 8);
         }
