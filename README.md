@@ -80,12 +80,19 @@ stays colour-consistent for free.
 
 Seven hazards, three verbs. **JUMP** (hole · seal · snowball · broken ice),
 **DODGE** (crystal · iceberg), **SLIDE** (arch). Silhouette tells you which
-before you can read any detail.
+before you can read any detail. Hitboxes are ~85 % of the drawn art.
 
-`_emit()` is the only way anything enters the world and it refuses to build a
-row with no answer: a row can only be full-width if one input clears all of it.
-Spacing derives from *speed*, not a constant, so 45 m/s never becomes a reflex
-lottery. Hitboxes are ~85 % of the drawn art.
+A row is survivable if either some lane is empty, or every occupied lane yields
+to the same input. `_emit()` is the only way anything enters the world and it
+**refuses** anything else — verified by probe, not by intention.
+
+Spacing is budgeted in **seconds, not metres**. Distance means nothing to a
+player; thinking time is the resource, and a fixed metre gap silently halves it
+as the run speeds up. ~1.6 s at the start, ~1.0 s flat out.
+
+Patterns report their own footprint and the generator skips past it. This
+sounds like bookkeeping; it is the difference between a fair game and an
+unwinnable one. See below.
 
 Collision is **swept along z**: at 42 m/s a prop moves 0.7 m per frame and a
 seal is 1.6 m deep, so a naive "overlapping right now?" test eventually misses
@@ -113,10 +120,39 @@ three changes worth ~11 ms/frame:
 
 ---
 
+## Balance — measured, not felt
+
+The first build was unplayable and I shipped it believing otherwise, because I
+had only ever tested that mechanics *worked*, never that a person could *survive*
+them. A playtest bot that makes perfect decisions but has human reaction latency
+settles that argument:
+
+| bot latency | old build | now |
+|---|---|---|
+| 0.30 s (sharp) | median **66 m** / 3.1 s | median **1347 m** / 54 s |
+| 0.45 s (casual) | median **69 m** / 3.3 s | median **1982 m** / 75 s |
+
+Three root causes, all found by instrumenting the generator rather than by
+staring at it:
+
+1. **Patterns overlapped.** `nextZ` advanced by the gap alone and ignored the
+   pattern's own length, so 14.9 % of patterns spawned *inside* the previous
+   one — dropping icebergs into the safe lane of a corridor. 7 z-slices per 40
+   runs were literally unsolvable. Now: 0 % and 0.
+2. **The speed ramp was violently front-loaded.** `outExpo` reached 31.9 m/s by
+   250 m and 43.2 (96 % of max) by 1 km. Now a plain `1 − e^(−d/k)`: 21.8 at
+   250 m, 27.6 at 1 km, 37 at 3 km.
+3. **Thinking time was below human reaction latency.** Median 0.49 s, min 0.39 s
+   between hazards. Now median 1.41 s, min 1.12 s.
+
+Also: multi-row lane puzzles (weaves, corridors) no longer greet a brand-new
+player — they unlock as the run earns them.
+
 ## Verification
 
 QA is automated against the real game in Chromium (Playwright), not asserted by
-inspection. **51 functional + 14 audio + 8 layout checks**, all passing:
+inspection. **51 functional + 14 audio + 8 layout + 7 celebration checks**, plus
+a fairness harness and a playtest bot. All passing:
 
 - no console errors, no failed requests, no missing assets (there are none)
 - perspective: scale grows with proximity; ground rows map monotonically to depth
@@ -129,6 +165,10 @@ inspection. **51 functional + 14 audio + 8 layout checks**, all passing:
 - audio: an `AnalyserNode` measures real RMS on the master bus — "the
   AudioContext exists" proves nothing, a fully-wired graph can emit silence
 - layout: all three lane centres on screen from 360×640 to 3440×1440
+- fairness: 40 simulated runs × 3 km — zero pattern overlaps, zero unsolvable
+  slices, and the solvability guard is probed directly (it must refuse a
+  jump+slide+dodge row and still allow a legal all-jump row)
+- celebration never leaves the ground and always hands control back
 
 Bugs this caught and fixed, among others: the FSM firing `enter` before the DOM
 was cached; `destination-in` erasing the runway it was supposed to be

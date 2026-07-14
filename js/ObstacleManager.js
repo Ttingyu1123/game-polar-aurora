@@ -29,6 +29,9 @@
 
   const VIS_FAR = 132;          // metres — beyond this a prop is pure haze
 
+  /** Obstacles closer together than this arrive as ONE decision. */
+  const ROW_TOL = 4.5;
+
   // verb: what clears it. 'jump' | 'dodge' | 'slide'
   const SPEC = {
     hole:      { verb: 'jump',  halfW: 1.02, yMin: -9, yMax: 0.02, halfZ: 1.02, flat: true },
@@ -63,8 +66,42 @@
 
     /* ── spawning ──────────────────────────────────────────── */
 
+    /**
+     * What each lane demands of the player within ROW_TOL metres of `z`.
+     * Anything closer together than this arrives as one decision — you get
+     * no separate chance to react — so it must be judged as a single row.
+     */
+    _answersAt(z) {
+      const row = [null, null, null];
+      for (let i = 0; i < this.list.length; i++) {
+        const o = this.list[i];
+        if (Math.abs(o.z0 - z) < ROW_TOL) row[o.lane] = SPEC[o.type].verb;
+      }
+      return row;
+    }
+
+    /**
+     * The ONE way anything enters the world, and it is a real gate.
+     *
+     * A row is survivable if either (a) some lane is empty, or (b) every
+     * occupied lane yields to the same input. Anything else is a death trap
+     * and is refused outright.
+     *
+     * This used to be guaranteed only WITHIN a single _pattern() call, which
+     * was worthless: patterns overlapped (15 % of them), so an iceberg would
+     * spawn in the safe lane of a corridor and the run became unwinnable
+     * through no fault of the player. Extent tracking stops the overlap; this
+     * check is the proof, not the intention.
+     */
     _emit(type, lane, z) {
       const sp = SPEC[type];
+      const row = this._answersAt(z);
+      if (row[lane]) return false;                     // lane already taken
+      row[lane] = sp.verb;
+      if (row[0] && row[1] && row[2] &&
+          !(row[0] === row[1] && row[1] === row[2])) {
+        return false;                                  // no gap, no shared verb
+      }
       this.list.push({
         type, lane, z0: z, z: z - 0,
         x: W3.LANES[lane],
@@ -74,12 +111,10 @@
         hit: false, scored: false, near: false,
         verb: sp.verb
       });
+      return true;
     }
 
-    /**
-     * Build one row. `lanes` is the set to fill; the caller guarantees
-     * either a free lane exists or every entry shares a clearing verb.
-     */
+    /** Build one row across `lanes`. */
     _row(z, lanes, typeFor) {
       for (const l of lanes) this._emit(typeFor(l), l, z);
     }
@@ -97,16 +132,20 @@
       this.t += dt;
       this.difficulty = difficulty;
 
-      // React time is what makes a runner fair: the gap between rows is
-      // derived from SPEED, not from a constant, so 40 m/s never becomes
-      // a reflex lottery.
-      const react = speed * 0.42;
-
       while (this.nextZ < worldZ + W3.SPAWN_Z) {
         const d = difficulty;
-        const gap = Math.max(13, react * (1.35 - d * 0.42)) + U.rand(0, 7 * (1 - d * 0.5));
-        this._pattern(this.nextZ, d);
-        this.nextZ += gap;
+        // Budget the gap in SECONDS, not metres. Distance means nothing to a
+        // player — thinking time is the actual resource, and a fixed metre gap
+        // silently halves it as the run speeds up. Measured median decision
+        // time was 0.49 s, which is barely above raw human reaction latency;
+        // this makes it ~1.6 s at the start, easing to ~1.0 s flat out.
+        const think = U.lerp(1.55, 0.95, d);
+        const gap = speed * think + U.rand(0, speed * 0.3);
+        // Multi-row patterns (weaves, corridors) are tens of metres long.
+        // Advancing by `gap` alone dropped the next pattern INSIDE the last
+        // one — which is how icebergs ended up in a corridor's safe lane.
+        const extent = this._pattern(this.nextZ, d) || 0;
+        this.nextZ += extent + gap;
       }
 
       for (let i = this.list.length - 1; i >= 0; i--) {
@@ -127,62 +166,79 @@
       }
     }
 
-    /** Choose and lay down one pattern at depth z. */
+    /**
+     * Choose and lay down one pattern at depth z.
+     * @returns {number} the pattern's own footprint in metres — the caller
+     *   MUST skip past it before placing the next one.
+     */
     _pattern(z, d) {
       const r = Math.random();
 
+      // The first stretch of a run teaches the verbs. Weaves and corridors
+      // are multi-row lane puzzles; meeting one in your first ten seconds is
+      // just a death, not a lesson. They unlock as the run earns them.
+      const canWeave = d > 0.16;
+      const canCorridor = d > 0.3;
+
       /* ── single hazard: the bread and butter ── */
-      if (r < 0.34 - d * 0.14) {
+      if (r < 0.42 - d * 0.16) {
         const lane = U.randInt(0, 2);
-        this._emit(Math.random() < 0.55 ? this._pickJumpable() : this._pickDodge(), lane, z);
-        return;
+        this._emit(Math.random() < 0.62 ? this._pickJumpable() : this._pickDodge(), lane, z);
+        return 0;
       }
 
       /* ── two lanes blocked, one open ── */
-      if (r < 0.56 - d * 0.10) {
+      if (r < 0.64 - d * 0.10) {
         const free = U.randInt(0, 2);
         const lanes = [0, 1, 2].filter((l) => l !== free);
         const mixVerbs = Math.random() < 0.5;
         this._row(z, lanes, () => (mixVerbs ? this._pickDodge() : this._pickJumpable()));
-        return;
+        return 0;
       }
 
       /* ── full-width JUMP wall (all three share one verb) ── */
-      if (r < 0.68) {
+      if (r < 0.76) {
         const t = Math.random() < 0.5 ? HOLE : BROKEN;
         this._row(z, [0, 1, 2], () => t);
-        return;
+        return 0;
       }
 
       /* ── full-width SLIDE arch ── */
-      if (r < 0.78) {
+      if (r < 0.86 || (!canWeave && !canCorridor)) {
         this._row(z, [0, 1, 2], () => ARCH);
-        return;
+        return 0;
       }
 
       /* ── weave: staggered singles, one per row ── */
-      if (r < 0.90) {
-        const n = 2 + (Math.random() < d ? 2 : 1);
+      if (r < 0.94 || !canCorridor) {
+        const n = 2 + (Math.random() < d ? 1 : 0);
         let lane = U.randInt(0, 2);
-        const step = Math.max(10, 13 - d * 3);
+        // Each step inside a weave is its own decision, so it gets its own
+        // thinking time — it is not a freebie just because it's one pattern.
+        const step = U.lerp(24, 15, d);
         for (let i = 0; i < n; i++) {
           this._emit(this._pickDodge(), lane, z + i * step);
           // Always shuffle to an ADJACENT lane — a two-lane hop at speed
           // is not a decision, it's a coin flip.
           lane = U.clamp(lane + (Math.random() < 0.5 ? -1 : 1), 0, 2);
         }
-        return;
+        return (n - 1) * step;
       }
 
       /* ── corridor: run one lane while walls stream past ── */
       const safe = U.randInt(0, 2);
       const walls = [0, 1, 2].filter((l) => l !== safe);
       const rows = 2 + ((Math.random() * 2) | 0);
+      const step = U.lerp(14, 9, d);
       for (let i = 0; i < rows; i++) {
-        this._row(z + i * 9, walls, () => (Math.random() < 0.7 ? CRYSTAL : ICEBERG));
+        this._row(z + i * step, walls, () => (Math.random() < 0.7 ? CRYSTAL : ICEBERG));
       }
-      // Reward the corridor with a jumpable at the end so it isn't free.
-      if (d > 0.35) this._emit(this._pickJumpable(), safe, z + rows * 9);
+      // Cap the corridor with a jumpable so it isn't a free ride.
+      if (d > 0.4) {
+        this._emit(this._pickJumpable(), safe, z + rows * step);
+        return rows * step;
+      }
+      return (rows - 1) * step;
     }
 
     /* ── boxes ─────────────────────────────────────────────── */

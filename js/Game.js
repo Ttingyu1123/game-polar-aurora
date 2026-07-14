@@ -27,7 +27,7 @@
 
   const SPEED_MIN = 19.5;
   const SPEED_MAX = 45;
-  const RAMP_M = 2400;          // metres to approach top speed
+  const RAMP_M = 2600;          // e-folding distance of the speed ramp
   const COMBO_WINDOW = 2.3;
 
   const POWER_TIME = { shield: 14, magnet: 9, cocoa: 5.5, multiplier: 10 };
@@ -300,12 +300,18 @@
 
       /* ── speed & difficulty ── */
       if (st === 'playing') {
-        // Steep-then-asymptotic: outExpo gets most of the way fast, and the
-        // last 20 % of speed costs the last 60 % of the run.
-        const p = U.clamp(this.distance / RAMP_M, 0, 1);
-        const target = U.lerp(SPEED_MIN, SPEED_MAX, U.Ease.outExpo(p * 0.92));
+        // A plain exponential approach: 1 − e^(−d/k). Gentle early, never
+        // quite arrives, so there is always a little more run left.
+        //
+        // The previous curve (outExpo) was violently front-loaded — measured
+        // at 25.5 m/s by 100 m and 43.2 by 1000 m, i.e. 96 % of top speed
+        // before most players had learned the verbs. Now: ~22 at 250 m, ~28
+        // at 1 km, ~37 at 3 km. Difficulty rides the same number so pattern
+        // selection and pacing can never drift apart.
+        const t = 1 - Math.exp(-this.distance / RAMP_M);
+        const target = U.lerp(SPEED_MIN, SPEED_MAX, t);
         this.speed = U.damp(this.speed, target * (this.powers.cocoa > 0 ? 1.16 : 1), 0.02, scaled);
-        this.difficulty = p;
+        this.difficulty = t;
       } else if (st === 'countdown') {
         this.speed = U.damp(this.speed, SPEED_MIN, 0.04, scaled);
       } else if (st === 'menu') {
