@@ -4,7 +4,9 @@ An original pseudo-3D endless polar runner. Every pixel and every sound is
 generated at runtime: **no image files, no audio files, no fonts, no
 frameworks, no libraries, no build step, no server.**
 
-Open `index.html` in a browser. That's it.
+**Play: https://game-polar-aurora.tingyudeco.com/**
+
+Or open `index.html` in a browser — it runs from `file://` with no server.
 
 ```
 index.html
