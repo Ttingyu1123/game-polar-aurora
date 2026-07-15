@@ -48,6 +48,13 @@
       this.quality = 1;
       this._p = { x: 0, y: 0, s: 0, visible: false };
       this._sinceP = 0;          // metres since the last power-up
+      this.rng = Math.random;    // seedable for daily runs — see ObstacleManager
+      this.fishMul = 1;          // biome dials (aurora storm rains fish)
+      this.crystalMul = 1;
+    }
+
+    setSeed(seed) {
+      this.rng = seed === null || seed === undefined ? Math.random : U.makeRNG((seed >>> 0) ^ 0x9E3779B9);
     }
 
     reset() {
@@ -55,7 +62,12 @@
       this.nextZ = 34;
       this.t = 0;
       this._sinceP = 0;
+      this.fishMul = 1;
+      this.crystalMul = 1;
     }
+
+    _rand(a, b) { return a + this.rng() * (b - a); }
+    _pick(arr) { return arr[(this.rng() * arr.length) | 0]; }
 
     _emit(type, x, y, z) {
       this.list.push({
@@ -103,7 +115,8 @@
 
       while (this.nextZ < worldZ + W3.SPAWN_Z) {
         this._plan(this.nextZ, difficulty, obstacles);
-        this.nextZ += U.rand(16, 30);
+        // fishMul > 1 (aurora storm) packs trails closer together.
+        this.nextZ += this._rand(16, 30) / Math.max(0.5, this.fishMul);
       }
 
       const mag = powers && powers.magnet > 0;
@@ -154,13 +167,14 @@
 
       /* Power-up? Rare, and never two in a row. */
       const pChance = 0.16 + d * 0.06;
-      if (this._sinceP > 210 && Math.random() < pChance) {
+      if (this._sinceP > 210 && this.rng() < pChance) {
         this._sinceP = 0;
         const free = [0, 1, 2].filter((l) => !byLane[l].length);
-        const lane = free.length ? U.pick(free) : U.randInt(0, 2);
-        const roll = Math.random();
+        const lane = free.length ? this._pick(free) : (this.rng() * 3) | 0;
+        // The aurora-storm biome triples the odds of its namesake crystal.
+        const roll = this.rng();
         let t;
-        if (roll < 0.04) t = AURORA;
+        if (roll < 0.04 * this.crystalMul) t = AURORA;
         else if (roll < 0.32) t = SHIELD;
         else if (roll < 0.58) t = MAGNET;
         else if (roll < 0.80) t = CRYSTAL;
@@ -176,22 +190,31 @@
       const choices = [];
       for (const l of lanes) {
         const o = byLane[l][0];
-        if (!o) { choices.push({ lane: l, shape: U.chance(0.3) ? 'wave' : 'line', z, bonus: false }); continue; }
+        if (!o) { choices.push({ lane: l, shape: this.rng() < 0.3 ? 'wave' : 'line', z, bonus: false }); continue; }
         if (o.verb === 'jump') choices.push({ lane: l, shape: 'arc', z: o.z0 - 3.2, bonus: true });
         else if (o.verb === 'slide') choices.push({ lane: l, shape: 'ground', z: o.z0 + 1.4, bonus: true });
         // dodge lanes get nothing — that lane is a wall
       }
       if (!choices.length) return;
 
-      const c = U.pick(choices);
-      const n = c.shape === 'arc' ? 5 : c.shape === 'ground' ? 4 : U.randInt(4, 7);
+      const c = this._pick(choices);
+      const n = c.shape === 'arc' ? 5 : c.shape === 'ground' ? 4 : 4 + ((this.rng() * 4) | 0);
       this.layTrail(c.shape, c.lane, c.z, n, FISH);
 
+      // Storm bounty: a second trail in another open lane.
+      if (this.fishMul > 1.3 && choices.length > 1) {
+        const other = choices.filter((ch) => ch.lane !== c.lane);
+        if (other.length && this.rng() < 0.6) {
+          const c2 = this._pick(other);
+          this.layTrail(c2.shape, c2.lane, c2.z, 4, FISH);
+        }
+      }
+
       // A golden fish at the apex is the reward for committing to the jump.
-      if (c.bonus && c.shape === 'arc' && Math.random() < 0.3) {
+      if (c.bonus && c.shape === 'arc' && this.rng() < 0.3) {
         this.list.pop();                                       // swap the middle one
         this._emit(GOLD, W3.LANES[c.lane], 2.2, c.z + 2.05 * 2);
-      } else if (!c.bonus && Math.random() < 0.09) {
+      } else if (!c.bonus && this.rng() < 0.09) {
         this._emit(GOLD, W3.LANES[c.lane], FLOAT_Y, c.z + n * 2.05 + 2.4);
       }
     }

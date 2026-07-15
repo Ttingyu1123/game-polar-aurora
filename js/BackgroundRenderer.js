@@ -39,6 +39,14 @@
       this.intensity = 1;      // aurora energy; spikes on aurora-crystal pickups
       this._flare = 0;
       this.quality = 1;
+
+      // Biome dials, set by Game each frame from Biomes.at(distance).
+      // envAurora scales every ribbon AND sampleAurora, so when a blizzard
+      // dims the sky, the ice reflections and rim lights dim with it — the
+      // whole frame stays lit by one consistent source.
+      this.envAurora = 1;
+      this.cloudMul = 1;
+      this.moonMul = 1;
       this._skyGrd = null;
       this._skyKey = '';
 
@@ -78,7 +86,7 @@
       // Multiplies every ribbon's alpha, and the ribbons composite additively
       // — so this saturates fast. At 1.5 the sky went flat white and lost the
       // curtain shapes entirely, which is a worse moment, not a bigger one.
-      this.intensity = 1 + this._flare * 0.62;
+      this.intensity = (1 + this._flare * 0.62) * this.envAurora;
     }
 
     /** Aurora crystal pickup → the whole sky pulses. */
@@ -193,13 +201,14 @@
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const halo = ctx.createRadialGradient(mx, my, r * 0.6, mx, my, r * 9);
-      halo.addColorStop(0, 'rgba(200,232,255,0.30)');
+      const hr = r * 9 * (0.7 + this.moonMul * 0.3);
+      const halo = ctx.createRadialGradient(mx, my, r * 0.6, mx, my, hr);
+      halo.addColorStop(0, 'rgba(200,232,255,' + (0.30 * this.moonMul).toFixed(3) + ')');
       halo.addColorStop(0.18, 'rgba(160,210,255,0.13)');
       halo.addColorStop(0.5, 'rgba(120,180,240,0.045)');
       halo.addColorStop(1, 'rgba(90,150,220,0)');
       ctx.fillStyle = halo;
-      ctx.beginPath(); ctx.arc(mx, my, r * 9, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(mx, my, hr, 0, TAU); ctx.fill();
       ctx.restore();
 
       // Disc with a terminator — lit from the upper-left, like the aurora.
@@ -337,7 +346,7 @@
           const cy = yBase - U.hash1(i * 41 + layer * 13) * cam.height * 0.05;
           const cw = cam.height * (0.14 + U.hash1(i * 53 + layer) * 0.2);
           const ch = cw * (0.16 + U.hash1(i * 59 + layer) * 0.08);
-          const a = (layer === 0 ? 0.11 : 0.19) * (0.55 + U.hash1(i * 61 + layer) * 0.45);
+          const a = (layer === 0 ? 0.11 : 0.19) * (0.55 + U.hash1(i * 61 + layer) * 0.45) * this.cloudMul;
           const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cw);
           g.addColorStop(0, U.rgba(190, 222, 250, a));
           g.addColorStop(0.5, U.rgba(150, 190, 230, a * 0.5));

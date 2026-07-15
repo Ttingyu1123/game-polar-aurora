@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#04101f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Polar Aurora — The Great Penguin Adventure</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐧</text></svg>">
 </head>
@@ -60,13 +64,21 @@
           <span class="best-label">BEST</span>
           <span class="best-value" id="menuBest">0</span>
           <span class="best-unit">pts</span>
+          <span class="bank-chip" id="menuBank" title="Fish bank">🐟 <b id="bankValue">0</b></span>
         </div>
         <button class="btn btn-primary" id="btnPlay">
           <span class="btn-glow"></span>
           <span class="btn-text">PLAY</span>
         </button>
+        <button class="btn btn-daily" id="btnDaily">
+          <span class="daily-title">DAILY RUN</span>
+          <span class="daily-sub" id="dailySub">—</span>
+        </button>
+        <div class="menu-missions" id="menuMissions"></div>
         <div class="menu-actions">
-          <button class="btn btn-ghost" id="btnHow">HOW TO PLAY</button>
+          <button class="btn btn-ghost" id="btnWardrobe">WARDROBE</button>
+          <button class="btn btn-ghost" id="btnRecords">RECORDS</button>
+          <button class="btn btn-ghost" id="btnHow">HELP</button>
           <button class="btn btn-ghost btn-icon" id="btnSoundMenu" title="Toggle sound" aria-label="Toggle sound">
             <svg viewBox="0 0 24 24" class="ico-sound"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave1" d="M16.5 8.5a5 5 0 0 1 0 7"/><path class="wave2" d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
           </button>
@@ -128,8 +140,55 @@
         <div><span id="goBest">0</span><small>BEST</small></div>
       </div>
       <div class="new-best hidden" id="newBest">✦ NEW RECORD ✦</div>
+      <div class="go-bank" id="goBank"></div>
       <button class="btn btn-primary" id="btnRetry"><span class="btn-glow"></span><span class="btn-text">RUN AGAIN</span></button>
-      <button class="btn btn-ghost" id="btnMenu">MAIN MENU</button>
+      <div class="menu-actions">
+        <button class="btn btn-ghost" id="btnShare">📤 SHARE</button>
+        <button class="btn btn-ghost" id="btnMenu">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ REVIVE OFFER ══════════ -->
+  <div id="revive" class="layer overlay hidden">
+    <div class="panel glass sheet sheet-sm revive-sheet">
+      <h2 class="sheet-title">SECOND WIND?</h2>
+      <p class="revive-copy">Spend fish from your bank to get back up — obstacles cleared, briefly invincible.</p>
+      <div class="revive-bar"><i id="reviveBar"></i></div>
+      <button class="btn btn-primary" id="btnRevive">
+        <span class="btn-glow"></span>
+        <span class="btn-text">REVIVE · <span id="reviveCost">40</span> 🐟</span>
+      </button>
+      <button class="btn btn-ghost" id="btnGiveUp">LET GO</button>
+      <div class="revive-bank" id="reviveBank"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ WARDROBE ══════════ -->
+  <div id="wardrobe" class="layer overlay hidden">
+    <div class="panel glass sheet sheet-wide">
+      <h2 class="sheet-title">WARDROBE</h2>
+      <div class="ward-bank">🐟 <b id="wardBank">0</b></div>
+      <div class="ward-tabs" id="wardTabs">
+        <button class="ward-tab active" data-slot="scarf">SCARF</button>
+        <button class="ward-tab" data-slot="body">PLUMAGE</button>
+        <button class="ward-tab" data-slot="trail">TRAIL</button>
+      </div>
+      <div class="ward-grid" id="wardGrid"></div>
+      <button class="btn btn-primary" id="btnWardClose"><span class="btn-glow"></span><span class="btn-text">DONE</span></button>
+    </div>
+  </div>
+
+  <!-- ══════════ RECORDS ══════════ -->
+  <div id="records" class="layer overlay hidden">
+    <div class="panel glass sheet sheet-wide">
+      <h2 class="sheet-title">RECORDS</h2>
+      <div class="rec-totals" id="recTotals"></div>
+      <h3 class="sheet-sub">BEST RUNS</h3>
+      <div class="rec-runs" id="recRuns"></div>
+      <h3 class="sheet-sub">WHAT GETS YOU</h3>
+      <div class="rec-deaths" id="recDeaths"></div>
+      <button class="btn btn-primary" id="btnRecClose"><span class="btn-glow"></span><span class="btn-text">BACK</span></button>
     </div>
   </div>
 
@@ -152,6 +211,8 @@
 
 <script src="js/Utils.js"></script>
 <script src="js/StateMachine.js"></script>
+<script src="js/Progress.js"></script>
+<script src="js/Biomes.js"></script>
 <script src="js/Camera.js"></script>
 <script src="js/InputManager.js"></script>
 <script src="js/AudioManager.js"></script>

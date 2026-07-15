@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
    ObstacleManager — spawning, patterns and vector art.
 
-   SEVEN HAZARDS, THREE VERBS
-     JUMP  → hole · seal · snowball · brokenIce
+   NINE HAZARDS, THREE VERBS
+     JUMP  → hole · seal · snowball · brokenIce · slider · roller
      DODGE → crystal · iceberg            (too tall to clear)
      SLIDE → arch                         (solid above a low gap)
 
@@ -11,11 +11,24 @@
    hazards are tall and spiky; slide-unders are wide and overhead;
    jumpables are low and rounded. That reads at 40 m in fog.
 
+   MOVERS
+   Two hazards move: the slider (a seal tobogganing across the whole
+   runway) and the roller (a snowball charging at you faster than the
+   world). Both are deliberately JUMP-verb — a mover you must dodge
+   would turn lane choice into a guess, but a mover you can always
+   jump stays a pure timing question no matter where it slides.
+
    SOLVABILITY
    `_emit()` is the only way anything enters the world, and it refuses
-   to create a row that has no answer: it tracks which lanes a row
-   fills and with which verb, so a row can only be full-width if a
-   single input clears all of it. There is no "unfair death" path.
+   to create a row that has no answer: a row must keep a free lane or
+   share one clearing verb. The slider counts as occupying EVERY lane
+   for this check, since it will visit them all.
+
+   DETERMINISM
+   All spawn-time randomness flows through `this.rng`, injectable via
+   setSeed(). With a seed, the layout of an entire run is a pure
+   function of distance — that is the whole daily-challenge feature.
+   Cosmetic randomness (art jitter, haze puffs) stays on Math.random.
    ═══════════════════════════════════════════════════════════ */
 (function (global) {
   'use strict';
@@ -25,7 +38,8 @@
   const TAU = U.TAU;
 
   const HOLE = 'hole', SEAL = 'seal', SNOWBALL = 'snowball', CRYSTAL = 'crystal',
-        BROKEN = 'brokenIce', ICEBERG = 'iceberg', ARCH = 'arch';
+        BROKEN = 'brokenIce', ICEBERG = 'iceberg', ARCH = 'arch',
+        SLIDER = 'slider', ROLLER = 'roller';
 
   const VIS_FAR = 132;          // metres — beyond this a prop is pure haze
 
@@ -33,6 +47,7 @@
   const ROW_TOL = 4.5;
 
   // verb: what clears it. 'jump' | 'dodge' | 'slide'
+  // allLanes: the solvability gate treats it as filling the whole row.
   const SPEC = {
     hole:      { verb: 'jump',  halfW: 1.02, yMin: -9, yMax: 0.02, halfZ: 1.02, flat: true },
     seal:      { verb: 'jump',  halfW: 0.50, yMin: 0, yMax: 0.66, halfZ: 0.80 },
@@ -40,7 +55,9 @@
     brokenIce: { verb: 'jump',  halfW: 0.92, yMin: 0, yMax: 0.60, halfZ: 0.55 },
     crystal:   { verb: 'dodge', halfW: 0.52, yMin: 0, yMax: 2.30, halfZ: 0.48 },
     iceberg:   { verb: 'dodge', halfW: 0.92, yMin: 0, yMax: 2.70, halfZ: 0.75 },
-    arch:      { verb: 'slide', halfW: 1.05, yMin: 0.60, yMax: 2.80, halfZ: 0.60 }
+    arch:      { verb: 'slide', halfW: 1.05, yMin: 0.60, yMax: 2.80, halfZ: 0.60 },
+    slider:    { verb: 'jump',  halfW: 0.55, yMin: 0, yMax: 0.62, halfZ: 0.85, allLanes: true },
+    roller:    { verb: 'jump',  halfW: 0.58, yMin: 0, yMax: 1.16, halfZ: 0.58 }
   };
 
   class ObstacleManager {
@@ -54,6 +71,12 @@
       this.quality = 1;
       this._p = { x: 0, y: 0, s: 0, visible: false };
       this._seed = 1;
+      this.rng = Math.random;
+    }
+
+    /** Deterministic layout for daily runs. Call before reset(). */
+    setSeed(seed) {
+      this.rng = seed === null || seed === undefined ? Math.random : U.makeRNG(seed >>> 0);
     }
 
     reset() {
@@ -61,8 +84,13 @@
       this.nextZ = 62;            // a calm runway before the first hazard
       this.difficulty = 0;
       this.t = 0;
-      this._seed = (Math.random() * 1e9) | 0;
+      this._seed = (this.rng() * 1e9) | 0;
     }
+
+    /* seeded helpers — spawn logic must never touch Math.random directly */
+    _rand(a, b) { return a + this.rng() * (b - a); }
+    _int(a, b) { return a + Math.floor(this.rng() * (b - a + 1)); }
+    _chance(p) { return this.rng() < p; }
 
     /* ── spawning ──────────────────────────────────────────── */
 
@@ -75,7 +103,16 @@
       const row = [null, null, null];
       for (let i = 0; i < this.list.length; i++) {
         const o = this.list[i];
-        if (Math.abs(o.z0 - z) < ROW_TOL) row[o.lane] = SPEC[o.type].verb;
+        if (Math.abs(o.z0 - z) >= ROW_TOL) continue;
+        if (SPEC[o.type].allLanes) {
+          // A mover sweeping the runway will visit every lane; for
+          // solvability it must claim all three.
+          row[0] = row[0] || SPEC[o.type].verb;
+          row[1] = row[1] || SPEC[o.type].verb;
+          row[2] = row[2] || SPEC[o.type].verb;
+        } else {
+          row[o.lane] = SPEC[o.type].verb;
+        }
       }
       return row;
     }
@@ -96,18 +133,26 @@
     _emit(type, lane, z) {
       const sp = SPEC[type];
       const row = this._answersAt(z);
-      if (row[lane]) return false;                     // lane already taken
-      row[lane] = sp.verb;
-      if (row[0] && row[1] && row[2] &&
-          !(row[0] === row[1] && row[1] === row[2])) {
-        return false;                                  // no gap, no shared verb
+      if (sp.allLanes) {
+        // A mover needs the whole row to itself (or all-jump company).
+        for (let l = 0; l < 3; l++) {
+          if (row[l] && row[l] !== sp.verb) return false;
+        }
+      } else {
+        if (row[lane]) return false;                   // lane already taken
+        row[lane] = sp.verb;
+        if (row[0] && row[1] && row[2] &&
+            !(row[0] === row[1] && row[1] === row[2])) {
+          return false;                                // no gap, no shared verb
+        }
       }
       this.list.push({
-        type, lane, z0: z, z: z - 0,
-        x: W3.LANES[lane],
+        type, lane, z0: z, z: z - 0, zPrev: z,
+        x: sp.allLanes ? 0 : W3.LANES[lane],
         seed: (this._seed = (this._seed * 1103515245 + 12345) & 0x7fffffff),
-        phase: U.rand(0, TAU),
+        phase: this._rand(0, TAU),
         spin: 0,
+        zOff: 0,                    // roller's own forward motion
         hit: false, scored: false, near: false,
         verb: sp.verb
       });
@@ -120,17 +165,35 @@
     }
 
     _pickJumpable() {
-      const r = Math.random();
+      const r = this.rng();
       if (r < 0.30) return HOLE;
       if (r < 0.58) return SEAL;
       if (r < 0.82) return SNOWBALL;
       return BROKEN;
     }
-    _pickDodge() { return Math.random() < 0.62 ? CRYSTAL : ICEBERG; }
+    _pickDodge() { return this.rng() < 0.62 ? CRYSTAL : ICEBERG; }
 
-    update(dt, worldZ, speed, difficulty) {
+    /** Is a mover currently alive ahead of the player? Cap: one at a time. */
+    _moverLive() {
+      for (let i = 0; i < this.list.length; i++) {
+        const t = this.list[i].type;
+        if ((t === SLIDER || t === ROLLER) && this.list[i].z > -3) return true;
+      }
+      return false;
+    }
+
+    /**
+     * @param {number} pace     analytic target speed at this distance — used
+     *   for the gap budget so seeded (daily) layouts are deterministic; the
+     *   live damped speed varies with frame timing, this does not.
+     * @param {number} thinkMul biome compensation: weather that reduces
+     *   legibility (blizzard) must widen the thinking budget to pay for it.
+     */
+    update(dt, worldZ, speed, difficulty, pace, thinkMul) {
       this.t += dt;
       this.difficulty = difficulty;
+      const budgetSpeed = pace || speed;
+      const tm = thinkMul || 1;
 
       while (this.nextZ < worldZ + W3.SPAWN_Z) {
         const d = difficulty;
@@ -142,8 +205,8 @@
         // this changes whether you can react at all. ~1.9 s opening (see an
         // obstacle, recognise the verb, act, with room to spare) easing to
         // ~1.15 s once you know the game.
-        const think = U.lerp(1.9, 1.15, d);
-        const gap = speed * think + U.rand(0, speed * 0.3);
+        const think = U.lerp(1.9, 1.15, d) * tm;
+        const gap = budgetSpeed * think + this.rng() * budgetSpeed * 0.3;
         // Multi-row patterns (weaves, corridors) are tens of metres long.
         // Advancing by `gap` alone dropped the next pattern INSIDE the last
         // one — which is how icebergs ended up in a corridor's safe lane.
@@ -153,11 +216,40 @@
 
       for (let i = this.list.length - 1; i >= 0; i--) {
         const o = this.list[i];
-        o.z = o.z0 - worldZ;
+        o.zPrev = o.z;
+        o.z = o.z0 - worldZ + o.zOff;
         if (o.z < -7) { this.list.splice(i, 1); continue; }
         if (o.type === SNOWBALL) o.spin += dt * (2.6 + speed * 0.06);
         if (o.type === SEAL) o.phase += dt * 1.7;
         if (o.type === CRYSTAL) o.phase += dt * 0.9;
+
+        /* movers */
+        if (o.type === SLIDER) {
+          // Toboggans across the full runway on a smooth sine. Slow enough
+          // (one crossing ≈ 3.2 s) that its position when it reaches you is
+          // readable from far away, not a surprise.
+          o.phase += dt * 1.95;
+          o.x = Math.sin(o.phase) * W3.LANE_W;
+          if (this.quality > 0.5 && o.z > 1 && o.z < 45 && Math.random() < dt * 8) {
+            this.ps.emit(1 /* DUST */, o.x - Math.cos(o.phase) * 0.5, 0.05, o.z, {
+              vx: -Math.cos(o.phase) * 1.5, vy: U.rand(0.3, 1.2), vz: U.rand(-1, 0),
+              life: U.rand(0.25, 0.5), size: U.rand(0.05, 0.13),
+              r: 235, g: 248, b: 255, a: 0.5, grav: -6, drag: 1.6
+            });
+          }
+        } else if (o.type === ROLLER) {
+          // Charges at the player faster than the world scrolls. The extra
+          // closing speed is capped well inside the jump window at any pace.
+          o.zOff -= dt * (5.5 + this.difficulty * 4.5);
+          o.spin += dt * (4.5 + speed * 0.08);
+          if (this.quality > 0.5 && o.z > 1 && o.z < 45 && Math.random() < dt * 6) {
+            this.ps.emit(1 /* DUST */, o.x + U.rand(-.3, .3), 0.06, o.z + 0.5, {
+              vy: U.rand(0.5, 1.6), vz: U.rand(0.5, 2),
+              life: U.rand(0.3, 0.6), size: U.rand(0.07, 0.16),
+              r: 240, g: 250, b: 255, a: 0.55, grav: -6, drag: 1.4
+            });
+          }
+        }
 
         // Frost haze puffing out of ice holes — cheap, sells cold.
         if (o.type === HOLE && o.z > 2 && o.z < 34 && U.chance(dt * 1.6 * this.quality)) {
@@ -175,33 +267,42 @@
      *   MUST skip past it before placing the next one.
      */
     _pattern(z, d) {
-      const r = Math.random();
+      const r = this.rng();
 
-      // The first stretch of a run teaches the verbs. Weaves and corridors
-      // are multi-row lane puzzles; meeting one in your first ten seconds is
-      // just a death, not a lesson. They unlock as the run earns them.
+      // The first stretch of a run teaches the verbs. Weaves, corridors and
+      // movers are one step up from "read a silhouette"; meeting one in your
+      // first ten seconds is just a death, not a lesson. They unlock as the
+      // run earns them.
       const canWeave = d > 0.16;
       const canCorridor = d > 0.3;
+      const canMove = d > 0.22 && !this._moverLive();
+
+      /* ── mover: the slider or the roller, always alone in its row ── */
+      if (canMove && r < 0.10) {
+        if (this.rng() < 0.55 || d < 0.35) this._emit(SLIDER, 1, z);
+        else this._emit(ROLLER, this._int(0, 2), z);
+        return 0;
+      }
 
       /* ── single hazard: the bread and butter ── */
-      if (r < 0.42 - d * 0.16) {
-        const lane = U.randInt(0, 2);
-        this._emit(Math.random() < 0.62 ? this._pickJumpable() : this._pickDodge(), lane, z);
+      if (r < 0.44 - d * 0.16) {
+        const lane = this._int(0, 2);
+        this._emit(this.rng() < 0.62 ? this._pickJumpable() : this._pickDodge(), lane, z);
         return 0;
       }
 
       /* ── two lanes blocked, one open ── */
       if (r < 0.64 - d * 0.10) {
-        const free = U.randInt(0, 2);
+        const free = this._int(0, 2);
         const lanes = [0, 1, 2].filter((l) => l !== free);
-        const mixVerbs = Math.random() < 0.5;
+        const mixVerbs = this.rng() < 0.5;
         this._row(z, lanes, () => (mixVerbs ? this._pickDodge() : this._pickJumpable()));
         return 0;
       }
 
       /* ── full-width JUMP wall (all three share one verb) ── */
       if (r < 0.76) {
-        const t = Math.random() < 0.5 ? HOLE : BROKEN;
+        const t = this.rng() < 0.5 ? HOLE : BROKEN;
         this._row(z, [0, 1, 2], () => t);
         return 0;
       }
@@ -214,8 +315,8 @@
 
       /* ── weave: staggered singles, one per row ── */
       if (r < 0.94 || !canCorridor) {
-        const n = 2 + (Math.random() < d ? 1 : 0);
-        let lane = U.randInt(0, 2);
+        const n = 2 + (this.rng() < d ? 1 : 0);
+        let lane = this._int(0, 2);
         // Each step inside a weave is its own decision, so it gets its own
         // thinking time — it is not a freebie just because it's one pattern.
         const step = U.lerp(24, 15, d);
@@ -223,18 +324,18 @@
           this._emit(this._pickDodge(), lane, z + i * step);
           // Always shuffle to an ADJACENT lane — a two-lane hop at speed
           // is not a decision, it's a coin flip.
-          lane = U.clamp(lane + (Math.random() < 0.5 ? -1 : 1), 0, 2);
+          lane = U.clamp(lane + (this.rng() < 0.5 ? -1 : 1), 0, 2);
         }
         return (n - 1) * step;
       }
 
       /* ── corridor: run one lane while walls stream past ── */
-      const safe = U.randInt(0, 2);
+      const safe = this._int(0, 2);
       const walls = [0, 1, 2].filter((l) => l !== safe);
-      const rows = 2 + ((Math.random() * 2) | 0);
+      const rows = 2 + ((this.rng() * 2) | 0);
       const step = U.lerp(14, 9, d);
       for (let i = 0; i < rows; i++) {
-        this._row(z + i * step, walls, () => (Math.random() < 0.7 ? CRYSTAL : ICEBERG));
+        this._row(z + i * step, walls, () => (this.rng() < 0.7 ? CRYSTAL : ICEBERG));
       }
       // Cap the corridor with a jumpable so it isn't a free ride.
       if (d > 0.4) {
@@ -300,6 +401,8 @@
           case BROKEN: this._broken(ctx, o, L); break;
           case ICEBERG: this._iceberg(ctx, o, L); break;
           case ARCH: this._arch(ctx, o, L); break;
+          case SLIDER: this._slider(ctx, o, L); break;
+          case ROLLER: this._roller(ctx, o, L); break;
         }
         ctx.restore();
       }
@@ -897,6 +1000,72 @@
       ctx.restore();
     }
 
+    /* ── SLIDER — a seal tobogganing across the runway ─────── */
+    _slider(ctx, o, L) {
+      const dir = Math.cos(o.phase);              // >0 → moving right
+      ctx.save();
+      // Lean into the direction of travel; the tilt is the "I am moving"
+      // read from far away, before lateral motion is even perceptible.
+      ctx.rotate(-dir * 0.16);
+
+      // Spray thrown off the leading edge.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const sg = ctx.createRadialGradient(-dir * 0.75, -0.1, 0, -dir * 0.75, -0.1, 0.5);
+      sg.addColorStop(0, 'rgba(235,250,255,0.4)');
+      sg.addColorStop(1, 'rgba(220,244,255,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(-dir * 0.75, -0.1, 0.5, 0, TAU); ctx.fill();
+      ctx.restore();
+
+      // The seal itself, belly-down on a sled of packed snow.
+      const board = ctx.createLinearGradient(-0.7, 0, 0.7, 0);
+      board.addColorStop(0, 'rgba(226,244,255,0.95)');
+      board.addColorStop(0.5, 'rgba(196,226,248,0.95)');
+      board.addColorStop(1, 'rgba(160,200,232,0.95)');
+      ctx.fillStyle = board;
+      ctx.beginPath();
+      ctx.ellipse(0, -0.035, 0.72, 0.085, 0, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(60,110,156,0.4)';
+      ctx.lineWidth = 0.014;
+      ctx.stroke();
+
+      this._seal(ctx, o, L);
+      ctx.restore();
+    }
+
+    /* ── ROLLER — a snowball charging faster than the world ── */
+    _roller(ctx, o, L) {
+      // Speed lines behind it: the anime cue for "this one is coming AT you".
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(220,244,255,0.4)';
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const a = -0.5 + i * 0.33 + Math.sin(o.spin * 2 + i) * 0.06;
+        const len = 0.5 + U.hash1(o.seed + i) * 0.5;
+        ctx.lineWidth = 0.03;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 0.62, -0.56 + Math.sin(a) * 0.62);
+        ctx.lineTo(Math.cos(a) * (0.62 + len), -0.56 + Math.sin(a) * (0.62 + len) * 0.4 - 0.1);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      this._snowball(ctx, o, L);
+
+      // A cold glint in the core — this snowball has ice in it.
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(0, -0.56, 0, 0, -0.56, 0.4);
+      g.addColorStop(0, 'rgba(150,225,255,' + (0.25 + 0.15 * Math.sin(o.spin * 3)).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(120,200,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -0.56, 0.4, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
     /* ── ICE ARCH (slide under) ────────────────────────────── */
     _arch(ctx, o, L) {
       const GAP = SPEC.arch.yMin;      // clearance under the span
@@ -1025,6 +1194,6 @@
   }
 
   ObstacleManager.SPEC = SPEC;
-  ObstacleManager.TYPES = { HOLE, SEAL, SNOWBALL, CRYSTAL, BROKEN, ICEBERG, ARCH };
+  ObstacleManager.TYPES = { HOLE, SEAL, SNOWBALL, CRYSTAL, BROKEN, ICEBERG, ARCH, SLIDER, ROLLER };
   global.ObstacleManager = ObstacleManager;
 })(window);

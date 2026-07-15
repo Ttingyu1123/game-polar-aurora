@@ -51,9 +51,13 @@
         if (o.hit) continue;
         const ob = obs.getBox(o);
 
-        // Swept z interval this prop covered during the frame.
-        const zNear = ob.z - ob.halfZ;
-        const zFar = ob.z + dz + ob.halfZ;
+        // Swept z interval this prop covered during the frame. Use the
+        // obstacle's OWN previous position, not `worldZ · dt`: a roller adds
+        // its own closing speed on top of the world's, and sweeping only the
+        // world's motion would let it tunnel straight through the player.
+        const prev = o.zPrev !== undefined ? o.zPrev : ob.z + dz;
+        const zNear = Math.min(ob.z, prev) - ob.halfZ;
+        const zFar = Math.max(ob.z, prev) + ob.halfZ;
         if (zNear > pb.halfZ || zFar < -pb.halfZ) {
           continue;
         }

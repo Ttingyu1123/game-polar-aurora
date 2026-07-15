@@ -43,6 +43,9 @@
       this._t = 0;
       this.quality = 1;      // scaled down by the perf governor
       this.windX = 0;
+      // Biome dial. The flake pool is allocated once at the blizzard maximum;
+      // calmer weather simply draws (and simulates the fall of) fewer flakes.
+      this.snowMul = 0.68;
     }
 
     /* ── ambient snowfall ──────────────────────────────────── */
@@ -88,7 +91,8 @@
 
     drawSnow(ctx) {
       const cam = this.cam, p = this._p;
-      const n = Math.floor(this.snow.length * this.quality);
+      const n = Math.min(this.snow.length,
+        Math.floor(this.snow.length * this.quality * U.clamp(this.snowMul, 0, 1)));
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < n; i++) {

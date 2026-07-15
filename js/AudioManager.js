@@ -465,6 +465,54 @@
       });
     }
 
+    /** Mission complete — a short, bright "task done" motif. */
+    mission() {
+      if (!this.ready || this.muted) return;
+      const t = this.ctx.currentTime;
+      this.duck(0.4);
+      [67, 74, 79, 86].forEach((n, i) => {
+        this._pluck(mtof(n), t + i * 0.07, 0.5, 0.075, this.sfxGain, 'triangle');
+      });
+      this._noiseBurst(t + 0.2, 0.3, 0.03, 6800, 'highpass', 0.6);
+    }
+
+    /** Revive — warmth rushing back in: a rising swell, then a heartbeat. */
+    revive() {
+      if (!this.ready || this.muted) return;
+      const t = this.ctx.currentTime;
+      this.duck(0.8);
+      const o = this._pluck(mtof(48), t, 1.1, 0.12, this.sfxGain, 'sine');
+      o.frequency.setValueAtTime(mtof(48), t);
+      o.frequency.exponentialRampToValueAtTime(mtof(60), t + 0.8);
+      [60, 64, 67, 72].forEach((n, i) => {
+        this._pluck(mtof(n), t + 0.5 + i * 0.06, 0.8, 0.07, this.sfxGain, 'triangle');
+      });
+      // heartbeat thumps
+      for (const dt of [0.05, 0.28]) {
+        const h = this._pluck(70, t + dt, 0.14, 0.12, this.sfxGain, 'sine');
+        h.frequency.setValueAtTime(95, t + dt);
+        h.frequency.exponentialRampToValueAtTime(45, t + dt + 0.1);
+      }
+    }
+
+    /** Wardrobe purchase — coins sliding across ice. */
+    purchase() {
+      if (!this.ready || this.muted) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 4; i++) {
+        this._pluck(mtof(88 + U.randInt(-2, 3)), t + i * 0.045, 0.22, 0.05, this.sfxGain, 'sine');
+      }
+      this._pluck(mtof(76), t + 0.2, 0.5, 0.07, this.sfxGain, 'triangle');
+    }
+
+    /** Flat "can't do that" tick for refused purchases. */
+    deny() {
+      if (!this.ready || this.muted) return;
+      const t = this.ctx.currentTime;
+      this._pluck(mtof(58), t, 0.16, 0.06, this.sfxGain, 'triangle');
+      this._pluck(mtof(52), t + 0.09, 0.2, 0.06, this.sfxGain, 'triangle');
+    }
+
     ui() {
       if (!this.ready || this.muted) return;
       const t = this.ctx.currentTime;

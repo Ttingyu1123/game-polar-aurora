@@ -37,4 +37,13 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+
+  // PWA: installable + offline. Registration is best-effort — the game must
+  // work identically from file:// (no SW there) and on hosts without HTTPS.
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* offline is a bonus, not a requirement */ });
+    });
+  }
 })();

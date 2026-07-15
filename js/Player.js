@@ -103,6 +103,16 @@
       this.hitSpin = 0;
       this.celebrateT = 0;
       this.celebrateDur = 1.4;
+
+      // Wardrobe. reset() must NOT clear an equipped style — dying doesn't
+      // undress you — so only fill the default on first construction.
+      if (!this.style) {
+        this.style = {
+          scarf: { base: '#e34355', dark: '#8e1b2c', light: '#ff6b7c', deep: '#a02234', fringe: '#c9304a' },
+          body: { top: '#1d3050', mid: '#172740', low: '#121e34', bot: '#0c1424' },
+          trail: null
+        };
+      }
       this.wingFlap = 0;
       this.speed01 = 0;
       this.auroraLight = [120, 220, 255, 0.5];
@@ -190,6 +200,14 @@
         }
         s[0].x = anchorX; s[0].y = anchorY;
       }
+    }
+
+    /** Apply a wardrobe style: {scarf:{base,dark,light,deep,fringe}, body:{top,mid,low,bot,patch?}, trail}. */
+    setStyle(style) {
+      if (!style) return;
+      if (style.scarf) this.style.scarf = style.scarf;
+      if (style.body) this.style.body = style.body;
+      this.style.trail = style.trail || null;
     }
 
     /* ── expression / gaze director ─────────────────────────── */
@@ -524,11 +542,12 @@
 
       // Base coat: cool blue-black. Head and torso share one ramp so they
       // read as a single continuous form rather than a head sat on a body.
+      const B = this.style.body;
       const bg2 = ctx.createLinearGradient(0, yTop, 0, yBot);
-      bg2.addColorStop(0, '#1d3050');
-      bg2.addColorStop(0.35, '#172740');
-      bg2.addColorStop(0.72, '#121e34');
-      bg2.addColorStop(1, '#0c1424');
+      bg2.addColorStop(0, B.top);
+      bg2.addColorStop(0.35, B.mid);
+      bg2.addColorStop(0.72, B.low);
+      bg2.addColorStop(1, B.bot);
       ctx.fillStyle = bg2;
       ctx.fillRect(-0.4, yTop - 0.05, 0.8, 1.05);
 
@@ -666,6 +685,32 @@
       const eyeR = this._decal(0.62, yaw);
       const cheekL = this._decal(-0.95, yaw);
       const cheekR = this._decal(0.95, yaw);
+
+      /* Emperor ear patches — the gold blaze on the side-back of the head.
+         Drawn first so the white cheek patches sit over their inner edge.
+         Placed at ±2.1 rad: mostly visible from BEHIND, which is exactly
+         where a chase camera lives — the one skin that looks best from our
+         angle. */
+      if (this.style.body.patch) {
+        const drawPatch = (d) => {
+          if (d.face > 0.55 || d.x === 0) return;      // hidden when facing us
+          const x = d.x * hrx * 0.9;
+          const vis = U.clamp(1 - Math.abs(d.face), 0.25, 1);
+          const g = ctx.createRadialGradient(x, hy + 0.02, 0, x, hy + 0.03, 0.1);
+          g.addColorStop(0, this.style.body.patch);
+          g.addColorStop(0.55, U.mix(this.style.body.patch, '#00000000', 0.35));
+          g.addColorStop(1, 'rgba(242,181,60,0)');
+          ctx.save();
+          ctx.globalAlpha = 0.9 * vis;
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.ellipse(x, hy + 0.025, 0.062, 0.085, d.x * 0.3, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        };
+        drawPatch(this._decal(-2.1, yaw));
+        drawPatch(this._decal(2.1, yaw));
+      }
 
       /* White cheek patches. Kept SMALL and dim on purpose: at 0.09 radius
          and 0.95 alpha the two of them overlapped into a single pale mask
@@ -960,14 +1005,15 @@
       const L = this.auroraLight;
 
       /* neck wrap — a torus band around the ellipsoid */
+      const SC = this.style.scarf;
       const yaw = this.bodyYaw;
       ctx.save();
       const ny = -0.635;
       const g = ctx.createLinearGradient(-0.22, ny - 0.05, 0.22, ny + 0.06);
-      g.addColorStop(0, '#b62b3e');
-      g.addColorStop(0.4, '#e34355');
-      g.addColorStop(0.72, '#ff6b7c');
-      g.addColorStop(1, '#a02234');
+      g.addColorStop(0, U.mix(SC.base, SC.dark, 0.45));
+      g.addColorStop(0.4, SC.base);
+      g.addColorStop(0.72, SC.light);
+      g.addColorStop(1, SC.deep);
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.ellipse(Math.sin(yaw) * 0.012, ny, 0.222, 0.062, this.lean * 0.4, 0, TAU);
@@ -977,7 +1023,10 @@
       ctx.beginPath();
       ctx.ellipse(Math.sin(yaw) * 0.012, ny, 0.222, 0.062, this.lean * 0.4, 0, TAU);
       ctx.clip();
-      ctx.strokeStyle = 'rgba(120,18,32,0.34)';
+      // Ribbing shade = the scarf's own dark tone, pulled toward black, at
+      // 40 % — U.parseColor keeps this correct for any wardrobe colour.
+      const ribC = U.parseColor(U.mix(SC.dark, '#000000', 0.35));
+      ctx.strokeStyle = U.rgba(ribC[0], ribC[1], ribC[2], 0.4);
       ctx.lineWidth = 0.009;
       for (let i = -5; i <= 5; i++) {
         const rx = i * 0.042;
@@ -988,8 +1037,9 @@
       }
       // top-lit edge
       const sg = ctx.createLinearGradient(0, ny - 0.06, 0, ny + 0.02);
-      sg.addColorStop(0, 'rgba(255,190,196,0.5)');
-      sg.addColorStop(1, 'rgba(255,190,196,0)');
+      const litC = U.parseColor(U.mix(SC.light, '#ffffff', 0.5));
+      sg.addColorStop(0, U.rgba(litC[0], litC[1], litC[2], 0.5));
+      sg.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = sg;
       ctx.fillRect(-0.24, ny - 0.07, 0.48, 0.09);
       ctx.restore();
@@ -1018,8 +1068,8 @@
           const w = U.lerp(0.070, 0.040, t) * (1 + t * 0.5);
           const a = pass === 0 ? 1 : 0.5;
           ctx.strokeStyle = pass === 0
-            ? U.mix('#e34355', '#8e1b2c', t * 0.75)
-            : U.rgba(255, 190, 196, 0.4 * (1 - t));
+            ? U.mix(SC.base, SC.dark, t * 0.75)
+            : (function (c) { return U.rgba(c[0], c[1], c[2], 0.4 * (1 - t)); })(U.parseColor(U.mix(SC.light, '#ffffff', 0.4)));
           ctx.lineWidth = pass === 0 ? w : w * 0.32;
           ctx.lineCap = 'round';
           ctx.globalAlpha = a;
@@ -1041,7 +1091,7 @@
       // Fringe at the tip.
       const tip = pts[pts.length - 1], prev = pts[pts.length - 2];
       const ang = Math.atan2(tip[1] - prev[1], tip[0] - prev[0]);
-      ctx.strokeStyle = '#c9304a';
+      ctx.strokeStyle = SC.fringe;
       ctx.lineWidth = 0.011;
       for (let i = -2; i <= 2; i++) {
         const a2 = ang + i * 0.19;

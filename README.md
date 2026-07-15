@@ -18,6 +18,46 @@ Loaded as classic `<script>` tags rather than ES modules on purpose: `file://`
 + `type="module"` is blocked by CORS in Chrome, and "runs locally by
 double-clicking" was a hard requirement.
 
+It is also an installable **PWA**: offline play via a network-first service
+worker, and even the app icons are generated procedurally (a script draws the
+penguin roundel on a canvas — no image editor was involved at any point).
+
+---
+
+## The meta-game (v2)
+
+Fish are a **currency**, not just score. Everything below feeds one economy:
+
+- **Wardrobe** — 6 scarves, 5 plumages (the Emperor has real gold ear patches,
+  placed on the back of the head where a chase camera can see them), 3 particle
+  trails. All colours, zero assets.
+- **Missions** — 3 active, drawn from a pool of 10, escalating targets, paid in
+  fish. Hooked into events the game already emitted: near-misses, arch slides,
+  combos, cocoa smashes.
+- **Daily Run** — everyone on Earth gets the same track each UTC day. Trivial
+  to build honestly because the generator's randomness was already injectable:
+  seed = hash(date), and spawn budgets use the analytic pace curve rather than
+  the frame-timing-dependent damped speed, so the layout is a pure function of
+  distance. Verified: two starts produce byte-identical obstacle lists.
+- **Second Wind** — one revive per run, 40 bank-fish, 5-second offer. It exists
+  because death used to cost the whole run; now it costs a decision. Never
+  offered when the bank can't pay — a revive button you can't afford is salt.
+- **Biomes** — the runway cycles AURORA NIGHT → BLIZZARD → MOONGLOW CALM →
+  AURORA STORM. One parameter set drives the sky, snow, wind audio, fish
+  density *and* the spawner's thinking-time budget, so weather can never reduce
+  legibility without paying for it (`think: 1.15` in a blizzard is enforced in
+  data, not in renderer code).
+- **Movers** — a seal tobogganing across all three lanes and a snowball that
+  outruns the world toward you. Both are deliberately JUMP-verb: a mover you
+  must dodge turns lane choice into a guess; a mover you can always jump stays
+  a pure timing question. The solvability gate treats the slider as occupying
+  every lane, and collision sweeps each obstacle's own previous position so
+  the roller's extra closing speed cannot tunnel.
+- **Records** — top-10 runs, lifetime stats, and a "what gets you" death
+  histogram.
+- **Share card** — a 1200×630 canvas composed from the actual frame you died
+  on (snapshotted before the red wash), via Web Share API or PNG download.
+
 ---
 
 ## Controls
@@ -175,8 +215,8 @@ the machine back to `run`, and the reproduction is a regression test.
 ## Verification
 
 QA is automated against the real game in Chromium (Playwright), not asserted by
-inspection. **51 functional + 14 audio + 8 layout + 7 celebration checks**, plus
-a fairness harness and a playtest bot. All passing:
+inspection. **51 functional + 21 meta-game + 14 audio + 8 layout + 7
+celebration checks**, plus a fairness harness and a playtest bot. All passing:
 
 - no console errors, no failed requests, no missing assets (there are none)
 - perspective: scale grows with proximity; ground rows map monotonically to depth
@@ -193,6 +233,13 @@ a fairness harness and a playtest bot. All passing:
   slices, and the solvability guard is probed directly (it must refuse a
   jump+slide+dodge row and still allow a legal all-jump row)
 - celebration never leaves the ground and always hands control back
+- meta-game: fish bank deposits on death; wardrobe purchase deducts, equips and
+  survives a reload; a mission completes mid-run, pays, and is replaced; the
+  revive offer appears, costs 40, resumes the run — and is NOT offered twice;
+  two daily starts produce identical layouts that differ from free runs;
+  the share card composes and actually contains pixels
+- playtest bot with movers live: 16/16 runs reached 1500 m at both 0.30 s and
+  0.45 s human latency; heaviest biomes hold 89–92 fps at full quality
 
 Bugs this caught and fixed, among others: the FSM firing `enter` before the DOM
 was cached; `destination-in` erasing the runway it was supposed to be
@@ -210,6 +257,8 @@ across the wrong axis.
 |---|---|
 | `Utils` | math, seeded noise, colour, canvas helpers, pool |
 | `StateMachine` | guarded FSM with enter/exit/update |
+| `Progress` | the one persistent layer: bank, wardrobe, missions, records |
+| `Biomes` | weather schedule — pure data + a blender |
 | `Camera` | pseudo-3D projection, shake, world metrics |
 | `InputManager` | keyboard + pointer → four buffered intents |
 | `AudioManager` | Web Audio: look-ahead music scheduler, wind, SFX, procedural reverb IR |
