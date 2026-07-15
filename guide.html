@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04101f">
+<title>Polar Aurora 完全攻略 — Complete Guide</title>
+<meta name="description" content="POLAR AURORA 完整攻略：操作、九種障礙、七種寶物、生態區天氣、任務與魚幣經濟、衣櫃價目、每日挑戰與進階技巧。">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{
+  --ice-100:#f2fbff;--ice-200:#d6f1ff;--ice-300:#a5dcf7;
+  --cyan:#4ff0d0;--green:#6cf59b;--violet:#a97bff;--pink:#ff7ec4;
+  --gold:#ffd166;--coral:#ff6b6b;--deep:#030b17;
+  --glass:rgba(18,44,76,.4);--brd:rgba(180,234,255,.2);
+  --font:"Avenir Next","Segoe UI",Inter,system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:var(--font);color:var(--ice-100);line-height:1.75;
+  background:linear-gradient(180deg,#04101f 0%,#071527 34%,#0a1c33 100%) fixed;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+
+header{text-align:center;padding:34px 0 10px}
+.logo{font-weight:900;letter-spacing:.04em;line-height:.95}
+.logo .l1{display:block;font-size:clamp(26px,5vw,38px);color:var(--ice-100)}
+.logo .l2{display:block;font-size:clamp(38px,8vw,60px);
+  background:linear-gradient(100deg,var(--cyan),var(--green) 30%,var(--ice-100) 52%,var(--violet) 76%,var(--pink));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:10px;font-size:13px;letter-spacing:.3em;color:var(--ice-300);text-transform:uppercase}
+.play-cta{display:inline-block;margin-top:22px;padding:13px 34px;border-radius:14px;
+  font-weight:800;letter-spacing:.1em;color:#04241f;
+  background:linear-gradient(120deg,#62f3d4,#7cf0a4 48%,#b6f2ff);
+  box-shadow:0 10px 30px rgba(79,240,208,.35)}
+.play-cta:hover{filter:brightness(1.08);text-decoration:none}
+
+h2{margin:56px 0 6px;font-size:24px;font-weight:900;letter-spacing:.06em}
+h2 small{display:block;font-size:11px;letter-spacing:.24em;color:var(--ice-300);font-weight:700;margin-top:2px}
+h3{margin:26px 0 8px;font-size:16px;color:var(--ice-200)}
+p{margin:10px 0;font-size:15px;color:var(--ice-200)}
+.card{background:var(--glass);border:1px solid var(--brd);border-radius:18px;padding:20px 22px;margin:16px 0;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+kbd{font-family:var(--font);font-size:12px;font-weight:800;padding:3px 9px;border-radius:7px;
+  background:rgba(160,220,255,.12);border:1px solid rgba(170,226,255,.32);
+  box-shadow:0 2px 0 rgba(0,20,40,.5)}
+.verb{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.12em;padding:2px 10px;border-radius:12px}
+.verb.jump{background:rgba(108,245,155,.14);color:var(--green);border:1px solid rgba(108,245,155,.4)}
+.verb.dodge{background:rgba(255,107,107,.12);color:var(--coral);border:1px solid rgba(255,107,107,.4)}
+.verb.slide{background:rgba(169,123,255,.14);color:var(--violet);border:1px solid rgba(169,123,255,.4)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:16px 0}
+.tile{background:var(--glass);border:1px solid var(--brd);border-radius:16px;padding:14px;display:flex;gap:13px;align-items:flex-start}
+.tile canvas{width:76px;height:76px;flex:none;border-radius:12px;background:
+  linear-gradient(180deg,#79b7dd 0%,#79b7dd 62%,#9ccbe8 63%,#8fc2e2 100%)}
+.tile b{display:block;font-size:14px;margin-bottom:2px}
+.tile small{display:block;font-size:12px;color:var(--ice-300);line-height:1.5}
+.tile .pts{color:var(--gold);font-weight:800;font-size:11px}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid rgba(170,226,255,.12)}
+th{font-size:11px;letter-spacing:.14em;color:var(--ice-300)}
+td:last-child{color:var(--ice-300)}
+.gold{color:var(--gold);font-weight:800}
+.tip{border-left:3px solid var(--cyan);padding:4px 0 4px 16px;margin:14px 0;color:var(--ice-200);font-size:14.5px}
+.tip b{color:var(--cyan)}
+footer{margin-top:70px;text-align:center;font-size:12.5px;color:var(--ice-300)}
+footer a{margin:0 10px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo"><span class="l1">POLAR AURORA</span><span class="l2">完全攻略</span></div>
+  <div class="sub">The Complete Guide</div>
+  <a class="play-cta" href="./">▶ 開始遊戲 PLAY NOW</a>
+</header>
+
+<h2>核心心法<small>THE THREE VERBS</small></h2>
+<div class="card">
+  <p>這個遊戲只有三個動作：<span class="verb jump">跳 JUMP</span>、<span class="verb dodge">閃 DODGE</span>、<span class="verb slide">滑 SLIDE</span>。
+  每一個障礙物的<b>剪影</b>就是答案 —— 低矮圓潤的跳過去、高聳尖銳的換車道、頭頂有東西的滑過去。
+  看到形狀的瞬間就知道要按什麼，不需要看清細節。這是整個遊戲的設計骨架。</p>
+</div>
+
+<h2>操作<small>CONTROLS</small></h2>
+<div class="card">
+<table>
+<tr><th>動作</th><th>鍵盤</th><th>觸控</th></tr>
+<tr><td>換車道</td><td><kbd>←</kbd> <kbd>→</kbd> 或 <kbd>A</kbd> <kbd>D</kbd></td><td>左右滑動</td></tr>
+<tr><td>跳躍</td><td><kbd>Space</kbd> <kbd>W</kbd> <kbd>↑</kbd></td><td>上滑或點一下</td></tr>
+<tr><td>滑行</td><td><kbd>S</kbd> <kbd>↓</kbd></td><td>下滑</td></tr>
+<tr><td>暫停 / 靜音</td><td><kbd>Esc</kbd> / <kbd>M</kbd></td><td>右上角按鈕</td></tr>
+</table>
+<p class="tip"><b>輸入緩衝：</b>指令會保留 0.14 秒 —— 落地前一瞬按跳照樣起跳，別怕按早。
+還有 0.09 秒的「土狼時間」：剛衝出冰洞邊緣的瞬間仍然跳得起來。</p>
+<p class="tip"><b>空中下滑 = 快速落地：</b>空中按下滑會把下墜速度直接拉滿。跳過小障礙後立刻按下滑，
+能提早落地接下一個動作 —— 高速段的保命技。</p>
+</div>
+
+<h2>障礙圖鑑<small>HAZARDS — 插圖由遊戲程式即時繪製</small></h2>
+<div class="grid" id="obGrid"></div>
+
+<h2>寶物圖鑑<small>TREASURES</small></h2>
+<div class="grid" id="coGrid"></div>
+
+<h2>計分機制<small>SCORING</small></h2>
+<div class="card">
+<table>
+<tr><th>來源</th><th>分數</th><th>備註</th></tr>
+<tr><td>跑動距離</td><td class="gold">每公尺 0.42 分</td><td>水晶 ×2 期間翻倍</td></tr>
+<tr><td>魚 / 金魚</td><td class="gold">1 / 12 分</td><td>同時累積連擊</td></tr>
+<tr><td>連擊里程碑</td><td class="gold">每 10 連擊 +連擊數×2</td><td>連擊窗 2.3 秒，斷了歸零</td></tr>
+<tr><td>驚險閃避 near miss</td><td class="gold">+2 分</td><td>貼著障礙擦過去；連續 8 次再 +20</td></tr>
+<tr><td>可可撞碎障礙</td><td class="gold">+15 分</td><td>無敵期間主動去撞</td></tr>
+<tr><td>極光水晶</td><td class="gold">+250 分</td><td>整片天空為你脈動</td></tr>
+</table>
+<p class="tip"><b>高分核心：</b>分數大頭是「距離 × 水晶加倍」。撿到 ×2 水晶的 10 秒內盡量活著，
+比多吃幾條魚值錢得多。</p>
+</div>
+
+<h2>生態區天氣<small>BIOMES — 每 ~2270 公尺一個循環</small></h2>
+<div class="card">
+<table>
+<tr><th>區段</th><th>長度</th><th>特徵</th></tr>
+<tr><td>🌌 極光夜 AURORA NIGHT</td><td>750m</td><td>標準狀態，一切如常</td></tr>
+<tr><td>🌨 暴風雪 BLIZZARD</td><td>520m</td><td>大雪強風、極光轉暗 —— 但障礙間距自動放寬 15% 補償能見度，不吃虧</td></tr>
+<tr><td>🌙 月光靜夜 MOONGLOW</td><td>520m</td><td>雪停風靜、月亮變大，魚略多 —— 喘息段</td></tr>
+<tr><td>💠 極光風暴 AURORA STORM</td><td>480m</td><td><b>魚量 ×1.6、雙軌魚陣、極光水晶出現率 ×3</b> —— 刷魚黃金段</td></tr>
+</table>
+<p class="tip"><b>風暴段就是薪水日：</b>看到天空爆亮就切魚多的車道，這 480 公尺請的魚夠買半條圍巾。</p>
+</div>
+
+<h2>魚幣經濟與任務<small>ECONOMY & MISSIONS</small></h2>
+<div class="card">
+<p>每一場收集的魚，<b>死掉時全數存進銀行</b> —— 輸也是進度。銀行的魚有三個出口：</p>
+<h3>🛍 衣櫃價目 WARDROBE</h3>
+<table>
+<tr><th>類別</th><th>品項與價格（🐟）</th></tr>
+<tr><td>圍巾</td><td>Crimson 免費 · Aurora Teal 150 · Polar Blush 200 · Golden Sun 250 · Violet Sky 250 · Midnight 300</td></tr>
+<tr><td>羽色</td><td>Classic 免費 · Frostling 350 · Shadow 350 · <b>Emperor 400</b>（金色耳斑在後腦勺，追逐視角看得最清楚）· Gilded 600</td></tr>
+<tr><td>拖尾</td><td>無 免費 · Aurora Ribbon 300 · Frost Wake 350 · Gold Sparkle 450</td></tr>
+</table>
+<h3>💨 復活 SECOND WIND</h3>
+<p>死亡時花 <b>40 🐟</b> 原地爬起來：清空眼前障礙、短暫無敵、保留分數與距離。<b>每場限一次</b>，5 秒內要決定。
+銀行不足 40 時不會出現這個選項。</p>
+<h3>✦ 任務 MISSIONS</h3>
+<p>同時進行 3 個任務（單場收魚、跑距離、驚險閃避、連擊、滑冰拱……共 10 種），完成當場發魚、自動補上下一階
+（目標約 ×2.1 遞增、獎勵也跟著漲）。任務進度顯示在主選單。</p>
+</div>
+
+<h2>每日挑戰<small>DAILY RUN</small></h2>
+<div class="card">
+<p>每天（UTC）全世界玩家跑<b>同一條賽道</b> —— 障礙的種類、車道、位置完全相同，因為賽道由日期的種子決定。
+今天摔死在哪座冰山，重開一場它還在原地等你。適合背板、適合跟朋友比同一條路的分數。
+每日最佳成績單獨記錄在 RECORDS。</p>
+</div>
+
+<h2>進階技巧<small>ADVANCED TIPS</small></h2>
+<div class="card">
+<p class="tip"><b>1. 魚陣就是導航。</b>魚的排列永遠鋪在「正確的路線」上：拱形魚陣 = 這裡該跳、貼地魚陣 = 這裡該滑。
+跟著魚走，等於免費開圖。</p>
+<p class="tip"><b>2. 磁鐵期間走中道。</b>磁鐵會吸 11 公尺內所有的魚，站中間車道吸得到左右兩邊 —— 不用為了魚冒險換道。</p>
+<p class="tip"><b>3. 可可是進攻道具。</b>5.5 秒無敵不是拿來保命的，是拿來<b>主動撞</b>的：每撞碎一個 +15 分，還推進「撞碎」任務。</p>
+<p class="tip"><b>4. 滑行海豹看節奏，不看位置。</b>橫掃海豹約 3.2 秒掃一趟。別追著它換車道 —— 它是跳躍類，站定原地、時間到就跳。</p>
+<p class="tip"><b>5. 衝刺雪球提早起跳。</b>它比世界更快衝向你，實際到達時間比看起來早 —— 比對付一般雪球提前半拍按跳。</p>
+<p class="tip"><b>6. 護盾不要省。</b>護盾只擋一次而且撿了新的不疊加。帶著護盾時可以故意走魚多但危險的路線 —— 它就是拿來換錢的。</p>
+<p class="tip"><b>7. 前 400 公尺決定成敗。</b>速度曲線前段最陡。開局慢，正是練「看剪影反應」的時候，把三個動詞變成反射，後面才跟得上。</p>
+</div>
+
+<footer>
+  <a href="./">▶ 玩遊戲 Play</a> ·
+  <a href="https://github.com/Ttingyu1123/game-polar-aurora">💾 原始碼 Source</a> ·
+  <a href="https://tingyudeco.com/portfolio/tools/game-polar-aurora">🎨 作品頁 Portfolio</a>
+  <p style="margin-top:14px;opacity:.55">POLAR AURORA — 100% procedural. No images, no audio files, no frameworks.<br>
+  本頁所有障礙與寶物插圖，由遊戲本體的繪圖程式碼即時渲染。</p>
+</footer>
+</div>
+
+<!-- The guide borrows the game's own art code, so its illustrations can never
+     drift out of date: what you see here IS what the game draws. -->
+<script src="js/Utils.js"></script>
+<script src="js/StateMachine.js"></script>
+<script src="js/Camera.js"></script>
+<script src="js/ObstacleManager.js"></script>
+<script src="js/CollectibleManager.js"></script>
+<script>
+(function () {
+  'use strict';
+  const stubPS = { emit: function () {}, };
+  const om = new ObstacleManager({}, stubPS);
+  const cm = new CollectibleManager({}, stubPS);
+  const L = [120, 230, 255, 0.55];             // a pleasant aurora key light
+
+  function tile(grid, draw, name, verbHtml, desc) {
+    const t = document.createElement('div');
+    t.className = 'tile';
+    const cv = document.createElement('canvas');
+    cv.width = 152; cv.height = 152;
+    const x = cv.getContext('2d');
+    x.scale(2, 2);                              // retina
+    try { draw(x); } catch (e) { /* a broken tile must not break the page */ }
+    const meta = document.createElement('div');
+    meta.innerHTML = '<b></b>' + verbHtml + '<small></small>';
+    meta.querySelector('b').textContent = name;
+    meta.querySelector('small').textContent = desc;
+    t.appendChild(cv); t.appendChild(meta);
+    grid.appendChild(t);
+  }
+
+  /* obstacle art is authored in metres with the ground at y=0 */
+  function ob(fn, o, scale, gy) {
+    return function (x) {
+      x.translate(38, gy === undefined ? 66 : gy);
+      x.scale(scale, scale);
+      om[fn](x, Object.assign({ seed: 12345, phase: 1.1, spin: 0.8, x: 0, z: 8 }, o || {}), L);
+    };
+  }
+  const obGrid = document.getElementById('obGrid');
+  const J = ' <span class="verb jump">跳 JUMP</span>', D = ' <span class="verb dodge">閃 DODGE</span>',
+        S = ' <span class="verb slide">滑 SLIDE</span>';
+
+  tile(obGrid, function (x) {          // ice hole needs projection — draw a poster version
+    x.translate(38, 44);
+    const g = x.createRadialGradient(0, 6, 2, 0, 8, 26);
+    g.addColorStop(0, '#01060f'); g.addColorStop(0.6, '#062435'); g.addColorStop(1, '#0b3348');
+    x.fillStyle = g;
+    x.beginPath(); x.ellipse(0, 8, 27, 12, 0, 0, 7); x.fill();
+    x.strokeStyle = 'rgba(232,250,255,.9)'; x.lineWidth = 2.4;
+    x.beginPath(); x.ellipse(0, 8, 27, 12, 0, 0, 7); x.stroke();
+    x.fillStyle = 'rgba(206,236,252,.9)';
+    x.beginPath(); x.ellipse(-8, 6, 5, 2.4, 0.4, 0, 7); x.fill();
+    x.beginPath(); x.ellipse(9, 11, 4, 2, -0.3, 0, 7); x.fill();
+  }, '冰洞 Ice Hole', J, '在冰上才會掉進去 —— 空中通過完全安全。');
+  tile(obGrid, ob('_seal', {}, 34), '海豹 Seal', J, '趴著曬月亮的路障。低矮好跳，貼著跳還能賺驚險分。');
+  tile(obGrid, ob('_snowball', {}, 30), '雪球 Snowball', J, '比海豹高一點，一樣跳。注意它在滾，判斷點取中心。');
+  tile(obGrid, ob('_broken', {}, 32), '碎冰 Broken Ice', J, '常常三車道全寬出現 —— 全寬碎冰唯一的答案就是跳。');
+  tile(obGrid, ob('_crystal', {}, 24), '冰晶 Ice Crystal', D, '太高跳不過。發光的尖塔 = 提早換車道。');
+  tile(obGrid, ob('_iceberg', {}, 22), '冰山 Iceberg', D, '最大的牆。剪影在霧裡也認得出來 —— 看到就搬家。');
+  tile(obGrid, ob('_arch', {}, 21), '冰拱 Ice Arch', S, '常三車道全寬。垂著冰柱的門 = 按下滑鑽過去。');
+  tile(obGrid, ob('_slider', {}, 30), '滑行海豹 Slider', J, '橫掃全部三條車道。別追它 —— 站定，時間到就跳。');
+  tile(obGrid, ob('_roller', {}, 26), '衝刺雪球 Roller', J, '比世界更快衝向你，提前半拍起跳。');
+
+  /* collectible art is authored around its own centre */
+  function co(fn, extra, scale) {
+    return function (x) {
+      x.translate(38, 38);
+      x.scale(scale || 42, scale || 42);
+      const stub = Object.assign({ type: 'fish', x: 0, y: 0, z: 6, phase: 0.9, spin: 0.55, seed: 7, taken: false, pop: 0 }, extra || {});
+      cm._glow(x, stub);
+      cm[fn](x, stub, stub._gold);
+    };
+  }
+  const coGrid = document.getElementById('coGrid');
+  tile(coGrid, co('_fish', {}), '魚 Fish', '', '+1 分＋1 連擊。死後全數存入銀行 —— 這是遊戲的貨幣。');
+  tile(coGrid, co('_fish', { type: 'goldenFish', _gold: true }), '金魚 Golden Fish', '', '+12 分。常出現在跳躍弧線的頂點 —— 敢跳才拿得到。');
+  tile(coGrid, co('_gem', { type: 'crystal' }), '水晶 Crystal ×2', '', '10 秒內所有分數翻倍，含距離分。高分的核心引擎。');
+  tile(coGrid, co('_shield', { type: 'shield' }), '冰盾 Ice Shield', '', '擋下一次撞擊（14 秒內有效）。有盾在身可以走險路。');
+  tile(coGrid, co('_magnet', { type: 'magnet' }), '磁鐵 Magnet', '', '9 秒吸走 11 公尺內所有的魚。走中道效率最高。');
+  tile(coGrid, co('_cocoa', { type: 'cocoa' }), '熱可可 Hot Cocoa', '', '5.5 秒無敵衝刺，撞碎障礙每個 +15 —— 主動去撞。');
+  tile(coGrid, co('_aurora', { type: 'auroraCrystal' }), '極光水晶 Aurora Crystal', '', '+250 分，整片天空為你脈動。極光風暴段出現率 ×3。');
+})();
+</script>
+</body>
+</html>
