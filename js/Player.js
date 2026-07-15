@@ -49,9 +49,10 @@
       this.cam = camera;
       this.ps = particles;
       this.audio = audio;
+      this._p = { x: 0, y: 0, s: 0, visible: false };
 
-      this.reset();
-
+      // The FSM must exist BEFORE reset(), because reset() puts it back to
+      // 'run' — see the note there.
       this.fsm = new global.StateMachine({
         run: {
           enter() {}, update() {}
@@ -59,7 +60,7 @@
         jump: {}, fall: {}, land: {}, slide: {}, hit: {}, celebrate: {}
       }, 'run');
 
-      this._p = { x: 0, y: 0, s: 0, visible: false };
+      this.reset();
     }
 
     reset() {
@@ -105,6 +106,14 @@
       this.wingFlap = 0;
       this.speed01 = 0;
       this.auroraLight = [120, 220, 255, 0.5];
+
+      // Put the machine back to 'run'. Forgetting this meant every run after
+      // your first death began in 'hit' — reset() cleared `dead` and hitSpin
+      // but left the STATE, so the hit branch kept integrating and the penguin
+      // span at 5.5 rad/s until you happened to press jump (which set a new
+      // state and hid the bug). 'slide' self-heals via its timer and 'hit'
+      // does not, which is exactly why this went unnoticed.
+      this.fsm.set('run', {}, true);
     }
 
     /* ── scarf: verlet chain in the penguin's local space ───── */

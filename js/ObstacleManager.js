@@ -136,10 +136,13 @@
         const d = difficulty;
         // Budget the gap in SECONDS, not metres. Distance means nothing to a
         // player — thinking time is the actual resource, and a fixed metre gap
-        // silently halves it as the run speeds up. Measured median decision
-        // time was 0.49 s, which is barely above raw human reaction latency;
-        // this makes it ~1.6 s at the start, easing to ~1.0 s flat out.
-        const think = U.lerp(1.55, 0.95, d);
+        // silently halves it as the run speeds up.
+        //
+        // This is THE difficulty dial. Raw speed only changes how it feels;
+        // this changes whether you can react at all. ~1.9 s opening (see an
+        // obstacle, recognise the verb, act, with room to spare) easing to
+        // ~1.15 s once you know the game.
+        const think = U.lerp(1.9, 1.15, d);
         const gap = speed * think + U.rand(0, speed * 0.3);
         // Multi-row patterns (weaves, corridors) are tens of metres long.
         // Advancing by `gap` alone dropped the next pattern INSIDE the last

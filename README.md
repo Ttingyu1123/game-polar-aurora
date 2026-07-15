@@ -124,13 +124,18 @@ three changes worth ~11 ms/frame:
 
 The first build was unplayable and I shipped it believing otherwise, because I
 had only ever tested that mechanics *worked*, never that a person could *survive*
-them. A playtest bot that makes perfect decisions but has human reaction latency
-settles that argument:
+them. A playtest bot that makes perfect decisions but carries human reaction
+latency settles that argument. Runs terminate at 1500 m ("this run is a
+success") or on death:
 
-| bot latency | old build | now |
+| bot latency | original build | now |
 |---|---|---|
-| 0.30 s (sharp) | median **66 m** / 3.1 s | median **1347 m** / 54 s |
-| 0.45 s (casual) | median **69 m** / 3.3 s | median **1982 m** / 75 s |
+| 0.30 s (sharp) | median **118 m**, worst 16 m, 0/10 reached 1500 m | **8/8 reached 1500 m** |
+| 0.45 s (casual) | median **71 m**, worst 32 m, 0/10 reached 1500 m | **8/8 reached 1500 m** |
+
+16/16 is a ceiling, not a grade: the bot now never dies, so this proves the game
+is *survivable*, not how far a human gets. A human also has to read the
+silhouette, which the bot gets for free.
 
 Three root causes, all found by instrumenting the generator rather than by
 staring at it:
@@ -140,13 +145,30 @@ staring at it:
    one — dropping icebergs into the safe lane of a corridor. 7 z-slices per 40
    runs were literally unsolvable. Now: 0 % and 0.
 2. **The speed ramp was violently front-loaded.** `outExpo` reached 31.9 m/s by
-   250 m and 43.2 (96 % of max) by 1 km. Now a plain `1 − e^(−d/k)`: 21.8 at
-   250 m, 27.6 at 1 km, 37 at 3 km.
+   250 m and 43.2 (96 % of max) by 1 km. Now a plain `1 − e^(−d/3600)` from a
+   slower 17.5 m/s start: 19.3 at 250 m, 24.2 at 1 km, 33 at 3 km.
 3. **Thinking time was below human reaction latency.** Median 0.49 s, min 0.39 s
-   between hazards. Now median 1.41 s, min 1.12 s.
+   between hazards — you cannot see, recognise and act in that. Now median
+   1.75 s, min 1.45 s. This is the difficulty dial; raw speed only changes how
+   it *feels*.
 
 Also: multi-row lane puzzles (weaves, corridors) no longer greet a brand-new
 player — they unlock as the run earns them.
+
+Tuning knobs, if you want it faster or slower: `SPEED_MIN` / `RAMP_M` in
+[Game.js](js/Game.js), and the `think` lerp (1.9 s → 1.15 s) in
+[ObstacleManager.js](js/ObstacleManager.js).
+
+## The spinning penguin
+
+`Player.reset()` restored every field — `dead`, `hitSpin`, position — but never
+its own **state machine**. So every run after your first death began in `hit`,
+where the death-spin term keeps integrating: the penguin span at 5.5 rad/s until
+you happened to press jump, which set a new state and hid the evidence.
+
+It survived all the earlier QA because the suite only ever tested a *fresh* run.
+`slide` self-heals through its timer; `hit` does not. Now reset() ends by forcing
+the machine back to `run`, and the reproduction is a regression test.
 
 ## Verification
 

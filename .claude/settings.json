@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Users/tingy/AppData/Local/Temp/claude/d--VibeCoding-Game-polar-aurora--Claude-/e213fc13-fbf7-4ae0-89d9-a20156b643e5/scratchpad\" && echo \"############ CURRENT BUILD ############\" && node playable-p.js 2>&1 | tail -7 && rm -rf /tmp/pa-old playable-p.js)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}

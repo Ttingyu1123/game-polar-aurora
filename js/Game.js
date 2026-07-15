@@ -25,9 +25,9 @@
   const U = global.U;
   const W3 = global.WORLD;
 
-  const SPEED_MIN = 19.5;
+  const SPEED_MIN = 17.5;       // opening pace — slow enough to read the ice
   const SPEED_MAX = 45;
-  const RAMP_M = 2600;          // e-folding distance of the speed ramp
+  const RAMP_M = 3600;          // e-folding distance of the speed ramp
   const COMBO_WINDOW = 2.3;
 
   const POWER_TIME = { shield: 14, magnet: 9, cocoa: 5.5, multiplier: 10 };
