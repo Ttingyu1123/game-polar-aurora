@@ -1,0 +1,11 @@
+# Local agent/tooling config — machine-specific, not part of the game.
+.claude/
+
+# Nothing here is built or installed; the game is the source. These are just
+# guards against stray local artefacts reaching a public repo.
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
