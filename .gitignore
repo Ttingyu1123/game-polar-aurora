@@ -12,3 +12,6 @@ Thumbs.db
 
 # Promo videos — large binaries, not for the repo.
 promo/
+tests/node_modules/
+tests/shots/
+tests/package-lock.json

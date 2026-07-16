@@ -1,0 +1,17 @@
+{
+  "name": "polar-aurora-tests",
+  "private": true,
+  "description": "Playwright harnesses that drive the real game. npm install, then node <harness>.js",
+  "scripts": {
+    "qa": "node qa.js",
+    "features": "node features.js",
+    "fairness": "node fairness.js",
+    "bot": "node playable.js",
+    "audio": "node audio.js",
+    "layout": "node layout.js",
+    "live": "node live2.js"
+  },
+  "dependencies": {
+    "playwright": "^1.59.0"
+  }
+}
